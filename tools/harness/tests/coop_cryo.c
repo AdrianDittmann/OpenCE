@@ -149,9 +149,44 @@ static struct player_datum *data_iterator_next(struct data_iterator *iterator)
 	return &players[iterator->next++];
 }
 
+enum
+{
+	SCRIPT_TECH = 3,
+	SCRIPT_INTERCOM = 4,
+	SCRIPT_OTHER = 5,
+	SOUND_LINE = 20,
+	SOUND_TECH_LINE = 21,
+};
+
+#define SOUND_DEFINITION_TAG 0x736E6421
+#define sound_definition_get(index) (&sound_definitions[index])
+
+struct sound_definition
+{
+	long longest_permutation_length;
+};
+
+static struct sound_definition sound_definitions[32];
+static long line_definition_index;
+
 static long tag_loaded(long group_tag, char const *name)
 {
-	return 7;
+	return !strcmp(name, CRYO_TECH_LINE) ? SOUND_TECH_LINE : 7;
+}
+
+static long coop_cryo_line_definition(void)
+{
+	return line_definition_index;
+}
+
+static boolean coop_cryo_host(void)
+{
+	return TRUE;
+}
+
+static short hs_find_script_by_name(char const *name)
+{
+	return !strcmp(name, CRYO_TECH_SCRIPT) ? SCRIPT_TECH : !strcmp(name, CRYO_INTERCOM_SCRIPT) ? SCRIPT_INTERCOM : NONE;
 }
 
 static void object_placement_data_new(struct object_placement_data *data, long definition_index, long owner_index)
@@ -346,6 +381,27 @@ static int seated_once(void)
 		seated += count;
 	}
 	return seated;
+}
+
+/* a10's dialogue woken at control, `line_length` and the cryo tech's
+`tech_length` milliseconds long */
+static void dialogue_new(long line_index, long line_length, long tech_length)
+{
+	world_new();
+	coop_cryo.released = TRUE;
+	coop_cryo.keyes_time = NONE;
+	coop_cryo.tech_time = NONE;
+	coop_cryo.intercom_time = NONE;
+	line_definition_index = line_index;
+	sound_definitions[SOUND_LINE].longest_permutation_length = line_length;
+	sound_definitions[SOUND_TECH_LINE].longest_permutation_length = tech_length;
+	now = 5000;
+}
+
+/* milliseconds as whole ticks, at least */
+static long ticks(long milliseconds)
+{
+	return (milliseconds * TICKS_PER_SECOND + 999) / 1000;
 }
 
 static void seats_new(void)
@@ -614,6 +670,51 @@ int main(int argc, char **argv)
 			"the scripts' player lost cryotube_2");
 		CHECK(coop_cryo.seats[2].player_index != NONE, "the waiting player is not in the first row seat");
 		CHECK(seated_once() == 1, "%d players seated, not 1", seated_once());
+		return 0;
+	}
+
+	/* Keyes after control, then the cryo tech, then the intercom: none over another */
+	CASE("dialogue")
+	{
+		long control = 5000;
+		long tech, intercom;
+
+		dialogue_new(SOUND_LINE, 5426, 1611);
+		CHECK(coop_cryo_script_wake_time(SCRIPT_OTHER, 0) == 0, "another script is held");
+		tech = coop_cryo_script_wake_time(SCRIPT_TECH, 0);
+		now++;
+		intercom = coop_cryo_script_wake_time(SCRIPT_INTERCOM, 0);
+		CHECK(coop_cryo.keyes_time > control && coop_cryo.keyes_time <= control + TICKS_PER_SECOND,
+			"Keyes speaks at %ld, control at %ld", coop_cryo.keyes_time, control);
+		CHECK(tech >= coop_cryo.keyes_time + ticks(5426), "the cryo tech at %ld talks over Keyes, %ld to %ld", tech,
+			coop_cryo.keyes_time, coop_cryo.keyes_time + ticks(5426));
+		CHECK(intercom >= tech + ticks(1611), "the intercom at %ld talks over the cryo tech, %ld to %ld", intercom, tech,
+			tech + ticks(1611));
+		CHECK(tech - (coop_cryo.keyes_time + ticks(5426)) <= TICKS_PER_SECOND &&
+			intercom - (tech + ticks(1611)) <= 2 * TICKS_PER_SECOND, "a pause of a second or more");
+		CHECK(coop_cryo_script_wake_time(SCRIPT_TECH, 77) == 77, "a sleeping script is woken");
+		return 0;
+	}
+	/* before the bay's intro has run, nothing waits */
+	CASE("dialogue-before")
+	{
+		dialogue_new(SOUND_LINE, 5426, 1611);
+		coop_cryo.released = FALSE;
+		CHECK(coop_cryo_script_wake_time(SCRIPT_TECH, 0) == 0 && coop_cryo_script_wake_time(SCRIPT_INTERCOM, 0) == 0,
+			"a script is held before the bay");
+		return 0;
+	}
+	/* no line made: the cryo tech at once, the intercom still after him */
+	CASE("dialogue-no-line")
+	{
+		long tech, intercom;
+
+		dialogue_new(NONE, 0, 1611);
+		tech = coop_cryo_script_wake_time(SCRIPT_TECH, 0);
+		intercom = coop_cryo_script_wake_time(SCRIPT_INTERCOM, 0);
+		CHECK(coop_cryo.keyes_time == NONE, "Keyes speaks with no line");
+		CHECK(tech <= now, "the cryo tech waits for no line until %ld", tech);
+		CHECK(intercom >= tech + ticks(1611), "the intercom at %ld talks over the cryo tech", intercom);
 		return 0;
 	}
 

@@ -14,11 +14,12 @@ header included in hcex build.
 
 /* ---------- structures */
 
+/* port: five channel types, one more than the Xbox's (sound_preferences.c) */
 struct sound_preferences
 {
 	short platform;
-	short actual_channel_counts[4];
-	short virtual_channel_counts[4];
+	short actual_channel_counts[5];
+	short virtual_channel_counts[5];
 	short unused;
 };
 
@@ -31,7 +32,7 @@ void write_sound_preferences(
 
 /* ---------- globals */
 
-extern short sound_channel_type_flags[4];
+extern short sound_channel_type_flags[5];
 
 /* ---------- public code */
 

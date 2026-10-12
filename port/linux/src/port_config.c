@@ -438,9 +438,9 @@ static const struct config_setting config_settings[] =
 	{ "network.coop_cryo_bay", _config_boolean, "false", "HALO_NET_COOP_CRYO_BAY", _environment_value,
 		_platform_all,
 		"Hosting online co-op on The Pillar of Autumn: every player wakes in a\n"
-		"cryotube, up to 18 (sixteen more tubes in the cryo bay, and an intro\n"
-		"that films them opening); false, the first player, as the campaign\n"
-		"has it." },
+		"cryotube, up to 18 (sixteen more tubes in the cryo bay, an intro that\n"
+		"films them opening, and Keyes calling them); false, the first player,\n"
+		"as the campaign has it." },
 	{ "network.coop_enemies_mode", _config_string, "\"per_player\"", "HALO_NET_COOP_ENEMIES_MODE", _environment_value,
 		_platform_all,
 		"Online co-op's extra enemies: \"none\", \"per_player\" (each squad of\n"

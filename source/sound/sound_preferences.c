@@ -28,12 +28,15 @@ symbols in this file:
 static struct sound_preferences default_sound_preferences =
 {
 	0,
-	{ 10, 51, 10, 10 },
-	{ 9, 46, 9, 9 },
+	{ 10, 51, 10, 10, 1 },
+	{ 9, 46, 9, 9, 1 },
 	0,
 };
 
-short sound_channel_type_flags[4] = { 8, 9, 10, 14 };
+/* port: and one channel of uncompressed stereo at 44 kHz, the format
+dsound_initialize_channel gives a channel without the compressed bit, for a
+sound made at load (port/linux/game/coop_cryo_line.c) */
+short sound_channel_type_flags[5] = { 8, 9, 10, 14, 6 };
 
 /* ---------- public code */
 

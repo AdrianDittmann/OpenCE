@@ -10,6 +10,9 @@
   weapons' reticles): redraws by MrBruh (`port/assets/hud`), based on
   reference photos by Aerocatia. The sniper rifle's zoom labels (2x, 10x)
   are set in Overpass (`port/assets/fonts`).
+- **Keyes' "Cryo one through Sixteen"** (network co-op's cryo bay): spoken
+  by Adrian Dittmann, in Keyes' voice by voice conversion
+  (`port/assets/sounds`).
 
 ## Third-party art
 

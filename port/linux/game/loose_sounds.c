@@ -38,6 +38,9 @@ address, so nothing is changed under one: when a reload changes anything,
 every sound stops and the sound cache lets go what is not playing first,
 then the definitions change, and the permutations that went are freed once
 no cache block holds them (at the latest when the map goes).
+
+A sound made in memory (loose_sounds_replace: network co-op's cryo bay's
+line) is played the same way, whatever the setting, until the map goes.
 */
 
 /* ---------- headers */
@@ -894,7 +897,8 @@ static void loose_sounds_update(
 		unsigned long file_size = 0;
 		boolean missing = TRUE;
 
-		if (!override)
+		/* (nor one made in memory: loose_sounds_replace) */
+		if (!override || (override->sound && !override->sound->file))
 		{
 			continue;
 		}
@@ -1071,6 +1075,99 @@ boolean loose_sounds_read(
 	}
 
 	return FALSE;
+}
+
+/* (coop_cryo_line.c) Plays the map's sound `tag_index` from `samples`, `size`
+bytes in the definition's `compression`, `encoding` and `sample_rate` (what
+this build plays: Xbox ADPCM, mono at 22 kHz or stereo at either, or 16-bit
+stereo at 44 kHz), as one permutation of its first pitch range, `length`
+milliseconds long, until the map goes: TRUE when the samples are the
+sound's, FALSE (they stay the caller's) when it cannot. */
+boolean loose_sounds_replace(
+	long tag_index,
+	byte *samples,
+	unsigned long size,
+	short compression,
+	short encoding,
+	short sample_rate,
+	long length)
+{
+	struct loose_override *override;
+	struct sound_definition *definition;
+	struct sound_pitch_range const *range;
+	struct sound_permutation *permutation;
+	struct loose_sound *sound;
+
+	if (!loose_sounds_globals.map_loaded || !overrides_new() || !(override = override_get(tag_index)) ||
+		override->sound || size == 0 || size > MAXIMUM_SOUND_DATA_SIZE ||
+		!((compression == SOUND_COMPRESSION_XBOX_ADPCM && ((encoding == 0 && sample_rate == 0) ||
+			(encoding == 1 && (sample_rate == 0 || sample_rate == 1)))) ||
+		(compression == SOUND_COMPRESSION_NONE && encoding == 1 && sample_rate == 1)))
+	{
+		return FALSE;
+	}
+	definition = sound_definition_get(tag_index);
+	if (definition->pitch_ranges.count < 1)
+	{
+		return FALSE;
+	}
+	range = TAG_BLOCK_GET_ELEMENT(&definition->pitch_ranges, 0, struct sound_pitch_range);
+	if (range->permutations.count < 1 || !(sound = malloc(sizeof(*sound))))
+	{
+		return FALSE;
+	}
+	memset(sound, 0, sizeof(*sound));
+	sound->ranges = malloc(sizeof(*sound->ranges));
+	sound->permutations = malloc(sizeof(*sound->permutations));
+	if (!sound->ranges || !sound->permutations)
+	{
+		loose_sound_free(sound);
+		return FALSE;
+	}
+	*sound->ranges = *range;
+	sound->ranges->actual_permutation_count = 1;
+	sound->ranges->played_permutation_mask = 0xFFFFFFFF;
+	sound->ranges->previous_permutation_index = NONE;
+	sound->ranges->forced_permutation_index = NONE;
+	sound->ranges->permutations.count = 1;
+	sound->ranges->permutations.address = sound->permutations;
+	sound->ranges->permutations.definition = NULL;
+	permutation = sound->permutations;
+	*permutation = *TAG_BLOCK_GET_ELEMENT(&range->permutations, 0, struct sound_permutation);
+	permutation->compression = compression;
+	permutation->next_permutation_index = NONE;
+	permutation->sample_buffer_size = 0;
+	permutation->samples.size = (long)size;
+	permutation->samples.file_offset = 0;
+	permutation->samples.address = samples;
+	permutation->mouth_data.size = 0;
+	permutation->mouth_data.address = NULL;
+	permutation->subtitle_data.size = 0;
+	permutation->subtitle_data.address = NULL;
+	permutation->unknown0 = NONE;
+	permutation->unknown1 = 0;
+	permutation->unknown2 = (unsigned long)tag_index;
+	permutation->unknown3 = (unsigned long)tag_index;
+	sound->permutation_count = 1;
+	sound->tag_index = tag_index;
+	sound->kept_bytes = size;
+	memcpy(&sound->definition, definition, sizeof(*definition));
+	sound->definition.flags &= ~(unsigned long)FLAG(_sound_definition_linked_permutations_bit);
+	sound->definition.compression = compression;
+	sound->definition.encoding = encoding;
+	sound->definition.sample_rate = sample_rate;
+	sound->definition.longest_permutation_length = length;
+	sound->definition.pitch_ranges.count = 1;
+	sound->definition.pitch_ranges.address = sound->ranges;
+
+	memcpy(&override->map_definition, definition, sizeof(*definition));
+	definition_set(definition, &sound->definition);
+	override->sound = sound;
+	sound->next = loose_sounds_globals.sounds;
+	loose_sounds_globals.sounds = sound;
+	loose_sounds_globals.kept_bytes += size;
+
+	return TRUE;
 }
 
 /* (the script function loose_sounds_reload) */

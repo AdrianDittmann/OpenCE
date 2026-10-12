@@ -660,6 +660,28 @@ byte *custom_edition_sounds_encode(
 	return encoded;
 }
 
+short *custom_edition_sounds_decode_frames(
+	byte const *data,
+	long data_bytes,
+	short compression,
+	long channels,
+	long rate,
+	long *frame_count)
+{
+	struct frames frames = { 0 };
+
+	if (data_bytes <= 0 || channels < 1 || channels > 2 ||
+		!samples_decode(data, data_bytes, compression, FALSE, channels, rate, &frames) ||
+		!frames_conform(&frames, channels, rate))
+	{
+		frames_free(&frames);
+		return NULL;
+	}
+	*frame_count = frames.count;
+
+	return frames.samples;
+}
+
 unsigned long custom_edition_sounds_decoded_bytes(
 	void)
 {

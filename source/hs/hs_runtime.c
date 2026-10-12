@@ -283,6 +283,7 @@ symbols in this file:
 #include "cseries/errors.h"
 #include "main/console.h"
 #include "game/game.h"
+#include "coop_cryo.h" /* port: port/linux/game/coop_cryo.c */
 
 /* ---------- constants */
 
@@ -1287,7 +1288,12 @@ void hs_evaluate_wake(
 
 	wake_thread_index = hs_find_thread_by_script((short)script_name_node->data);
 	if (wake_thread_index != NONE)
+	{
 		hs_wake(wake_thread_index);
+		/* port: or later, after network co-op's cryo bay (port/linux/game/coop_cryo.c) */
+		thread = hs_thread_get(wake_thread_index);
+		thread->sleep_until = coop_cryo_script_wake_time((short)script_name_node->data, thread->sleep_until);
+	}
 	hs_return(thread_index, 0);
 
 	return;

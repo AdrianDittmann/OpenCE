@@ -43,6 +43,18 @@ long coop_cryo_cell_definition(
 void coop_cryo_cell_release(
 	void);
 
+/* coop_cryo_line.c: Keyes' sound, his line made the first time asked on a
+map (NONE if it can't be) */
+long coop_cryo_line_definition(
+	void);
+void coop_cryo_line_release(
+	void);
+
+/* hs_runtime.c's hs_evaluate_wake: when a script just woken runs */
+long coop_cryo_script_wake_time(
+	short script_index,
+	long sleep_until);
+
 /* players.c: a player held back from spawning whose tube waits */
 boolean coop_cryo_seat_waiting(
 	long player_index);

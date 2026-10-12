@@ -4,8 +4,9 @@ tools/hud_assets.py), the menus' titles (port/assets/titles, made by
 tools/title_assets.py), their controller button icons (port/assets/buttons,
 made by tools/button_assets.py), the fonts the text is drawn with
 (port/assets/fonts), the menus' files (port/assets/menus, made by
-tools/ce_menus.py) and SMAA's shader and lookup textures
-(port/third_party/smaa) in the game as C data:
+tools/ce_menus.py), SMAA's shader and lookup textures
+(port/third_party/smaa) and the words of Keyes' line in network co-op's
+cryo bay (port/assets/sounds) in the game as C data:
 
     python tools/embed_assets.py OUTPUT.c
 
@@ -48,6 +49,8 @@ SMAA_FILES = (("SMAA.hlsl", "xgpu_smaa_shader"), ("area_tex.zlib", "xgpu_smaa_ar
               ("search_tex.zlib", "xgpu_smaa_search_texture"))
 # the desktop windows' icon (tools/app_icon.py; port/linux/src/sdl_platform.c)
 WINDOW_ICON = Path("port/assets/icon/opence-icon-256.png")
+# the cryo bay's words (port/linux/game/coop_cryo_line.c)
+CRYO_WORDS = Path("port/assets/sounds/cryo_one_through_sixteen.wav")
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 
@@ -90,7 +93,8 @@ def hud_asset_inputs() -> List[Path]:
     return [*inputs, *(folder / f"{asset['name']}.png" for folder, asset, _ in textures()),
             *(FONT_ASSETS / name for name in font_files()), *(MENU_ASSETS / name for name in menu_files()),
             *(SMAA_ASSETS / name for name, _ in smaa_files()),
-            *([WINDOW_ICON] if (ROOT / WINDOW_ICON).is_file() else [])]
+            *([WINDOW_ICON] if (ROOT / WINDOW_ICON).is_file() else []),
+            *([CRYO_WORDS] if (ROOT / CRYO_WORDS).is_file() else [])]
 
 
 def hud_configure_inputs() -> List[Path]:
@@ -246,6 +250,13 @@ def main() -> None:
     lines.append(f"const unsigned long platform_window_icon_size = {len(data)};")
     lines.append("")
     lines.append("#endif")
+    # the cryo bay's words, a WAV file (of size 0 where the checkout has none)
+    data = (ROOT / CRYO_WORDS).read_bytes() if (ROOT / CRYO_WORDS).is_file() else b""
+    lines.append("")
+    lines.append("const unsigned int coop_cryo_words[] = {")
+    lines.extend(words(data) if data else ["\t0,"])
+    lines.append("};")
+    lines.append(f"const unsigned long coop_cryo_words_size = {len(data)};")
     output = Path(sys.argv[1])
     output.parent.mkdir(parents=True, exist_ok=True)
     text = "\n".join(lines) + "\n"

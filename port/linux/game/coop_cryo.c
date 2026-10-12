@@ -24,6 +24,8 @@ and films the rows opening before Bungie's shot.
 #include "objects/object_types.h"
 #include "scenario/scenario.h"
 #include "scenario/scenario_definitions.h"
+#include "sound/game_sound.h"
+#include "sound/sound_definitions.h"
 #include "tag_files/tag_files.h"
 #include "tag_files/tag_groups.h"
 #include "units/biped_definitions.h"
@@ -45,6 +47,9 @@ short scripted_camera_next_camera_point(void);
 #define CRYO_TUBE "levels\\a10\\devices\\cryotube\\cryotube"
 #define CRYO_SEAT "CT-driver"
 #define CRYO_STEAM_JET "scenery\\emitters\\steam jets\\steam jets"
+#define CRYO_TECH_LINE "sound\\dialog\\a10\\a10_450_cryotech"
+#define CRYO_TECH_SCRIPT "mission_cryo_explosion"
+#define CRYO_INTERCOM_SCRIPT "main_setup"
 
 enum
 {
@@ -81,6 +86,11 @@ enum
 	CRYO_EXIT_JITTER_TICKS = 24,
 	CRYO_CLOSE_DELAY_TICKS = 20,
 	CRYO_CLOSE_TICKS = 4,
+
+	/* after control: Keyes, the cryo tech, then the ship's intercom */
+	CRYO_KEYES_DELAY_TICKS = 30,
+	CRYO_TECH_DELAY_TICKS = 15,
+	CRYO_INTERCOM_DELAY_TICKS = 30,
 };
 
 #define CRYO_ROW_Y 2.65f
@@ -165,6 +175,9 @@ static struct
 	boolean stand_ins_gone;
 	struct cryo_seat seats[CRYO_SEATS];
 	word bungie_jets_held;
+	long keyes_time;
+	long tech_time;
+	long intercom_time;
 
 	/* every machine */
 	long tube_indices[CRYO_TUBES];
@@ -581,6 +594,22 @@ static void cryo_after_intro_update(
 	}
 }
 
+static long cryo_sound_ticks(
+	long definition_index)
+{
+	return (sound_definition_get(definition_index)->longest_permutation_length * TICKS_PER_SECOND + 999) / 1000;
+}
+
+static void cryo_dialogue_update(
+	void)
+{
+	if (coop_cryo.keyes_time != NONE && game_time_get() >= coop_cryo.keyes_time)
+	{
+		coop_cryo.keyes_time = NONE;
+		scripted_sound_new(coop_cryo_line_definition(), NONE, 1.0f);
+	}
+}
+
 static void cryo_host_update(
 	void)
 {
@@ -602,6 +631,7 @@ static void cryo_host_update(
 	cryo_intro_update();
 	cryo_exits_update();
 	cryo_after_intro_update();
+	cryo_dialogue_update();
 }
 
 static void cryo_tubes_find(
@@ -717,6 +747,9 @@ void coop_cryo_new_game(
 	coop_cryo.intro_time = NONE;
 	coop_cryo.first_exit_time = NONE;
 	coop_cryo.close_time = NONE;
+	coop_cryo.keyes_time = NONE;
+	coop_cryo.tech_time = NONE;
+	coop_cryo.intercom_time = NONE;
 	for (index = 0; index < CRYO_SEATS; index++)
 	{
 		coop_cryo.seats[index].vehicle_index = NONE;
@@ -734,6 +767,7 @@ void coop_cryo_update(
 {
 	if (!coop_cryo_active())
 		return;
+	coop_cryo_line_definition();
 	if (coop_cryo_host())
 		cryo_host_update();
 	cryo_steam_update();
@@ -779,6 +813,7 @@ void coop_cryo_tags_unloaded(
 	void)
 {
 	coop_cryo_cell_release();
+	coop_cryo_line_release();
 }
 
 boolean coop_cryo_scripts_cooperative(
@@ -856,3 +891,29 @@ void coop_cryo_exit_seat_end(
 	cryo_unit_face(unit_index, &forward);
 }
 
+/* the cryo tech's line, then the intercom's, wait for Keyes' */
+long coop_cryo_script_wake_time(
+	short script_index,
+	long sleep_until)
+{
+	short tech_script_index;
+
+	if (sleep_until != 0 || !coop_cryo.released || !coop_cryo_host() || !coop_cryo_active())
+		return sleep_until;
+	tech_script_index = hs_find_script_by_name(CRYO_TECH_SCRIPT);
+	if (script_index != tech_script_index && script_index != hs_find_script_by_name(CRYO_INTERCOM_SCRIPT))
+		return sleep_until;
+	if (coop_cryo.tech_time == NONE)
+	{
+		long now = game_time_get();
+		long line_index = coop_cryo_line_definition();
+		long tech_line_index = tag_loaded(SOUND_DEFINITION_TAG, CRYO_TECH_LINE);
+
+		coop_cryo.keyes_time = line_index != NONE ? now + CRYO_KEYES_DELAY_TICKS : NONE;
+		coop_cryo.tech_time = line_index != NONE ?
+			coop_cryo.keyes_time + cryo_sound_ticks(line_index) + CRYO_TECH_DELAY_TICKS : now;
+		coop_cryo.intercom_time = coop_cryo.tech_time + CRYO_INTERCOM_DELAY_TICKS +
+			(tech_line_index != NONE ? cryo_sound_ticks(tech_line_index) : 0);
+	}
+	return script_index == tech_script_index ? coop_cryo.tech_time : coop_cryo.intercom_time;
+}

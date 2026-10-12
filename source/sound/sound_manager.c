@@ -2466,10 +2466,14 @@ long sound_new_impulse(
 
 	if (sound_manager_globals.initialized && sound_manager_globals.enabled)
 	{
-		if (definition->compression == _sound_compression_xbox_adpcm &&
+		if ((definition->compression == _sound_compression_xbox_adpcm &&
 			((definition->encoding == _sound_encoding_mono &&
 				definition->sample_rate == 0) ||
-				definition->encoding == _sound_encoding_stereo))
+				definition->encoding == _sound_encoding_stereo)) ||
+			/* port: or uncompressed stereo at 44 kHz (sound_preferences.c) */
+			(definition->compression == _sound_compression_none &&
+				definition->encoding == _sound_encoding_stereo &&
+				definition->sample_rate == 1))
 		{
 			if (source->scale != 0.f || definition->zero_gain_modifier != 0.f)
 			{

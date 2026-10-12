@@ -227,6 +227,16 @@ byte *custom_edition_sounds_encode(
 	long rate,
 	long encoded_rate,
 	unsigned long *encoded_bytes);
+/* The same samples (little-endian) decoded: a buffer of the game's
+allocator of *frame_count frames of `channels` 16-bit samples at `rate`;
+NULL when they cannot be (coop_cryo_line.c) */
+short *custom_edition_sounds_decode_frames(
+	byte const *data,
+	long data_bytes,
+	short compression,
+	long channels,
+	long rate,
+	long *frame_count);
 /* the bytes of the samples custom_edition_sounds_decode made */
 unsigned long custom_edition_sounds_decoded_bytes(
 	void);

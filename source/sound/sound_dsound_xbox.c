@@ -25,7 +25,8 @@ enum
 {
 	NUMBER_OF_SOUND_SAMPLE_RATES = 2,
 	MAXIMUM_SOUND_CHANNELS = 256,
-	NUMBER_OF_SOUND_CHANNEL_TYPES = 4,
+	/* port: one more than the Xbox's (sound_preferences.c) */
+	NUMBER_OF_SOUND_CHANNEL_TYPES = 5,
 	MAXIMUM_DSOUND_ERROR_STRING_LENGTH = 256,
 	MAXIMUM_DSOUND_ERROR_MESSAGE_LENGTH = 4096,
 	MAXIMUM_SOUND_PACKETS = 4,
@@ -164,12 +165,14 @@ struct dsound_globals
 
 typedef char dsound_globals_type_first_channel_index_offset_assert[
 	offsetof(struct dsound_globals, type_first_channel_index) == 0x7808 ? 1 : -1];
+/* port: four bytes on from the Xbox's (0x789C, 0x78C4, 0x78C8), past the fifth
+channel type's first channel index */
 typedef char dsound_globals_direct_sound_offset_assert[
-	offsetof(struct dsound_globals, direct_sound) == 0x789C ? 1 : -1];
+	offsetof(struct dsound_globals, direct_sound) == 0x78A0 ? 1 : -1];
 typedef char dsound_globals_paused_offset_assert[
-	offsetof(struct dsound_globals, paused) == 0x78C4 ? 1 : -1];
+	offsetof(struct dsound_globals, paused) == 0x78C8 ? 1 : -1];
 typedef char dsound_globals_pause_gain_offset_assert[
-	offsetof(struct dsound_globals, pause_gain) == 0x78C8 ? 1 : -1];
+	offsetof(struct dsound_globals, pause_gain) == 0x78CC ? 1 : -1];
 
 struct sound_platform_definition
 {

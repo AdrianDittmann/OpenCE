@@ -204,7 +204,8 @@ record, its hash's first 32 bits (the header checksum before), which a
 client finds its file by (below, "Map sharing"); version 30 sends with the
 game's settings whether every co-op player wakes in a cryotube on The Pillar
 of Autumn (`port/linux/game/coop_cryo.c`), so that every machine sets the
-cryo bay up alike: its static tubes out and its cradles in.
+cryo bay up alike: its static tubes out, its cradles in and Keyes' line
+made.
 
 `port/linux/network_format.txt` records the wire format of the current
 version (`tools/network_format.py`): `test_linux_port.py` fails when the
