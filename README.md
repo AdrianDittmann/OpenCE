@@ -12,6 +12,22 @@ Windows, Android and web browsers. The decompilation is of the Xbox build 2342
 The port starts from the decompilation of [bnunu/halo-1](https://github.com/bnunu/halo-1).
 That project is a fork of [punpckhdq/halo](https://github.com/punpckhdq/halo).
 
+## OpenCE Pillar of Awesome
+
+This fork is OpenCE Pillar of Awesome, after the Pillar of Autumn. Network
+co-op on The Pillar of Autumn can wake every player in a cryotube: 16 more
+tubes in two rows of cradles, an intro that films each row's hoods opening
+before Bungie's shot, and Captain Keyes calling Cryo One through Sixteen (the
+words: `port/assets/sounds/README.md`). Up to 18 players get a tube.
+
+- Download: [this fork's releases](https://github.com/AdrianDittmann/OpenCE-Pillar-of-Awesome/releases)
+  (Windows). Copy `halo.exe` and `SDL3.dll` into an OpenCE folder; everyone in
+  the game needs this build.
+- The host turns it on with `coop_cryo_bay = true` under `[network]` in
+  `config.toml`, then hosts Internet co-op on The Pillar of Autumn.
+- The bay without the voice line is
+  [OpenCE#308](https://github.com/OpenCommunityEdition/OpenCE/pull/308).
+
 ## Download
 
 GitHub Actions builds the game for each commit. These links download the
